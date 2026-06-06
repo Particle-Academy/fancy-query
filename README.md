@@ -1,5 +1,7 @@
 # @particle-academy/fancy-query
 
+[![Fancified](art/fancified.svg)](https://particle.academy)
+
 Server-state for **React + Inertia + Reverb** apps — a thin wrapper over
 [TanStack Query](https://tanstack.com/query) that adds the three integrations
 you'd otherwise hand-roll per component:
