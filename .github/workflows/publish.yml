@@ -26,10 +26,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      # OIDC trusted publishing — no token. Auth comes from the GitHub Actions
+      # OIDC identity (id-token: write above) matched against the npmjs.com
+      # Trusted Publisher configured for this repo + workflow. Provenance is
+      # attested automatically.
       - name: Publish
-        env:
-          # First-publish bootstrap: a granular npm token set as the NPM_TOKEN
-          # repo secret. After the first publish lands, add the npmjs.com Trusted
-          # Publisher, revoke the token, and remove this env line (OIDC takes over).
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npx -y npm@latest publish --provenance --access public
