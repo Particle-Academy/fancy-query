@@ -2,7 +2,8 @@ import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toQueryKeys } from "./keys";
 import { useEchoClient } from "./FancyDataRoot";
-import type { EchoChannelLike, EchoInvalidationMap, EchoLike } from "./types";
+import { resolveChannel } from "./channel";
+import type { EchoInvalidationMap, EchoLike } from "./types";
 
 export interface UseFancyEchoInvalidationOptions {
   /** Pass an Echo client explicitly instead of reading it from FancyDataRoot. */
@@ -70,20 +71,4 @@ export function useFancyEchoInvalidation(
     // `events` is captured via the serialized `eventsKey`.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [echo, enabled, channel, eventsKey, queryClient]);
-}
-
-/** Map a prefixed channel name to the right Echo subscription + bare name. */
-function resolveChannel(
-  echo: EchoLike,
-  channel: string,
-): { subscribe: () => EchoChannelLike; bareName: string } {
-  if (channel.startsWith("private-")) {
-    const name = channel.slice("private-".length);
-    return { subscribe: () => echo.private(name), bareName: name };
-  }
-  if (channel.startsWith("presence-")) {
-    const name = channel.slice("presence-".length);
-    return { subscribe: () => (echo.join ?? echo.channel).call(echo, name), bareName: name };
-  }
-  return { subscribe: () => echo.channel(channel), bareName: channel };
 }

@@ -1,5 +1,34 @@
 # Changelog
 
+## 0.2.0 — 2026-06-08
+
+### Added
+- `useFancyStream(key, options)` — the streaming counterpart to
+  `useFancyEchoInvalidation`. Instead of invalidate-and-refetch, it maps Echo
+  channel events onto `setQueryData` **reducers** so the cache is patched in
+  place — append a streamed post, reconcile on completion — without dropping
+  optimistic / in-flight state. Built for chat + agentic surfaces.
+  - `on: { 'post.created': (cache, e) => [...cache, e.post], … }` — per-event
+    reducers run through `queryClient.setQueryData`.
+  - `isStreaming` tracked from configurable start/end events
+    (default `stream.started` / `stream.completed`; pass `streaming: false` to
+    opt out).
+  - `poll: { while: 'streaming' | 'always', intervalMs }` — missed-broadcast
+    recovery by re-fetching `fetchInitial` on an interval.
+  - `append(item)` optimistic helper for array-shaped caches + an imperative
+    `setData(updater)`.
+  - Reuses the same channel-prefix resolution + connection ownership as
+    `useFancyEchoInvalidation` (now shared via `src/channel.ts`).
+- Exported types: `UseFancyStreamOptions`, `UseFancyStreamResult`,
+  `StreamReducer`.
+
+## 0.1.1 — 2026-06-06
+
+### Fixed
+- Widened peer ranges: `@inertiajs/react` to `^1 || ^2 || ^3` (and marked
+  optional), `@tanstack/react-query` to `^5`, react/react-dom to `^18 || ^19`,
+  so the package installs cleanly across consumer stacks.
+
 ## 0.1.0 — 2026-05-29 (scaffold, unreleased)
 
 Initial scaffold of `@particle-academy/fancy-query` — server-state for

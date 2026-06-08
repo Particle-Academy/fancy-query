@@ -12,6 +12,12 @@ export type {
 } from "./useFancyMutation";
 export { useFancyEchoInvalidation } from "./useFancyEchoInvalidation";
 export type { UseFancyEchoInvalidationOptions } from "./useFancyEchoInvalidation";
+export { useFancyStream } from "./useFancyStream";
+export type {
+  UseFancyStreamOptions,
+  UseFancyStreamResult,
+  StreamReducer,
+} from "./useFancyStream";
 export { useInertiaHydration } from "./useInertiaHydration";
 export type {
   InertiaHydrationMap,

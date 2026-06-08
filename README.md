@@ -9,15 +9,17 @@ you'd otherwise hand-roll per component:
 - **Inertia page-prop hydration** — seed the cache from `usePage().props` so the
   first render is hydrated with no fetch.
 - **Echo-event → query invalidation** — a declarative `event → keys` map.
+- **Echo-event → in-place cache updates** — for streaming/agentic surfaces,
+  map events onto `setQueryData` reducers instead of refetching.
 - **Auto-invalidating mutations** — mutate, then refetch the keys it touched.
 
 The value-add is the integrations, not the cache. TanStack Query, `@inertiajs/react`,
 and `react` are **peer dependencies** — nothing is bundled, and apps that don't
 use a data hook tree-shake the package away.
 
-> **Status:** scaffold (v0.1.0). Public API is in place; comprehensive tests,
-> the `fancy-inertia` `withData` composition, and a few edge cases are tracked
-> in Tynn.
+> **Status:** v0.2.0. Public API is in place (query / mutation / invalidation /
+> hydration / streaming); comprehensive tests, the `fancy-inertia` `withData`
+> composition, and a few edge cases are tracked in Tynn.
 
 ## Install
 
@@ -57,6 +59,35 @@ useFancyEchoInvalidation(`private-org.${orgId}`, {
 
 A second component reading `["org-tools", filters]` in the same render gets the
 cached result — no extra request.
+
+## Streaming — patch the cache, don't refetch
+
+For chat + agentic surfaces, invalidate-and-refetch is the wrong tool: a token
+stream or a chat backlog wants the broadcast **appended** to what's already
+cached, not a full reload that drops in-flight optimistic state.
+`useFancyStream` maps Echo events onto `setQueryData` reducers:
+
+```tsx
+const { data: messages, isStreaming, append } = useFancyStream(["chat", chatId], {
+  channel: `private-chat.${chatId}`,
+  fetchInitial: () => api.get(`/api/chat/${chatId}/history`),
+  on: {
+    "post.created":     (cache, e) => [...(cache ?? []), e.post],
+    "post.delta":       (cache, e) => patchLast(cache, e.delta),
+    "stream.completed": (cache, e) => reconcile(cache, e),
+  },
+  // Recover broadcasts dropped while the socket was down.
+  poll: { while: "streaming", intervalMs: 4000 },
+});
+
+// Optimistically show the user's own message before the server echoes it.
+const send = (text) => { append({ id: tempId(), text, pending: true }); api.post(...); };
+```
+
+`isStreaming` flips on `stream.started` / `stream.completed` by default
+(configurable via `streaming`, or `streaming: false` to skip). The Echo
+connection is still owned by the consumer — same channel-prefix rules and
+`FancyDataRoot` wiring as `useFancyEchoInvalidation`.
 
 ## End to end
 
@@ -112,6 +143,7 @@ function ToolsPage({ orgId }) {
 | `useFancyQuery(key, fn, options?)` | `useQuery` with the ergonomic signature; full options pass through. |
 | `useFancyMutation({ mutationFn, invalidates, … })` | `useMutation` that invalidates keys on success. |
 | `useFancyEchoInvalidation(channel, eventMap, options?)` | Subscribe + invalidate on broadcasts. |
+| `useFancyStream(key, options)` | Subscribe + patch the cache in place via per-event `setQueryData` reducers (streaming/chat). |
 | `useInertiaHydration(map, options?)` | Seed the cache from Inertia page props. |
 | `useQueryClient`, `QueryClient`, `toQueryKeys` | Re-exported primitives. |
 

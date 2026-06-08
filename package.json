@@ -1,6 +1,6 @@
 {
   "name": "@particle-academy/fancy-query",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Server-state for React + Inertia + Reverb apps — a thin wrapper over TanStack Query that adds Inertia page-prop hydration, declarative Echo-event → query invalidation, and auto-invalidating mutations. The value-add is the integrations, not the cache.",
   "repository": {
     "type": "git",
