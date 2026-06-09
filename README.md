@@ -17,7 +17,7 @@ The value-add is the integrations, not the cache. TanStack Query, `@inertiajs/re
 and `react` are **peer dependencies** — nothing is bundled, and apps that don't
 use a data hook tree-shake the package away.
 
-> **Status:** v0.2.0. Public API is in place (query / mutation / invalidation /
+> **Status:** v0.3.0. Public API is in place (query / mutation / invalidation /
 > hydration / streaming); comprehensive tests, the `fancy-inertia` `withData`
 > composition, and a few edge cases are tracked in Tynn.
 
@@ -88,6 +88,32 @@ const send = (text) => { append({ id: tempId(), text, pending: true }); api.post
 (configurable via `streaming`, or `streaming: false` to skip). The Echo
 connection is still owned by the consumer — same channel-prefix rules and
 `FancyDataRoot` wiring as `useFancyEchoInvalidation`.
+
+For real chat / tool-execution state machines, the reducer map isn't enough —
+so there's an escape hatch alongside it:
+
+```tsx
+useFancyStream(["chat", chatId], {
+  channel, fetchInitial: (prev) => mergeHistory(prev, await api.history(chatId)),
+  on: { "post.created": (cache, e) => [...(cache ?? []), e.post] },   // pure cache
+  onEvent: (event, payload, { setData, refetch }) => {                // side effects
+    if (event === "fallback.triggered") window.dispatchEvent(new CustomEvent("…", payload));
+    if (event === "stream.failed") refetch();
+  },
+  events: ["fallback.triggered"],                  // subscribe for onEvent only
+  streaming: { endEvent: ["stream.completed", "stream.failed"] },   // multiple terminals
+  poll: { while: "streaming", intervalMs: 4000, commit: (next) => turnDone(next) }, // merge, don't clobber
+  flushSync: true,                                 // paint streamed events instantly
+});
+```
+
+- **`onEvent`** runs for every subscribed event *outside* the cache reducer —
+  for `window` events, transient UI state, async reconciles.
+- **`fetchInitial(prev)`** receives the previous cache, and **`poll.commit`**
+  gates whether a recovery refetch is applied — so the poll *merges* instead of
+  wiping in-flight streamed posts.
+- **`streaming.startEvent`/`endEvent`** accept a list; **`flushSync`** opts into
+  synchronous paints.
 
 ## End to end
 

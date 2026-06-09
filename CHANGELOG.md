@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.3.0 — 2026-06-09
+
+`useFancyStream` extensions for real chat / tool-execution state machines (#3,
+follow-up to #2). All additive + backward-compatible.
+
+### Added
+- **`onEvent(event, payload, ctx)`** — a side-effect handler called for *every*
+  subscribed event, outside the cache reducer. The place for `window`
+  CustomEvents, transient UI state, async reconciles, etc. `ctx` is
+  `{ setData, refetch, append }` (new `StreamEventContext` type).
+- **`events: string[]`** — extra event names to subscribe to for `onEvent` only
+  (no cache reducer).
+- **Multiple terminal events** — `streaming.startEvent` / `endEvent` now accept
+  `string | string[]`, so a turn can end on `stream.completed` **or**
+  `stream.failed`.
+- **Reconcile poll** — `fetchInitial` now receives the **previous cache**
+  (`fetchInitial(prev)`) so a recovery poll can *merge* (preserve optimistic
+  rows) instead of replacing. New `poll.commit(next, prev)` gates whether a
+  refetch is applied — e.g. only commit when the turn is done — so an in-flight
+  stream isn't clobbered. `refetch()` (top-level + in `ctx`) uses this path.
+- **`flushSync: true`** — wrap cache writes in React's `flushSync` so streamed
+  events paint immediately (React batches updates from non-React sources).
+
+### Changed
+- The stream query no longer refetches on window focus (it would silently
+  replace in-flight streamed state). Recovery is via `poll` / `refetch()`.
+- `on` is now optional (use `onEvent`-only streams).
+
 ## 0.2.0 — 2026-06-08
 
 ### Added

@@ -17,6 +17,7 @@ export type {
   UseFancyStreamOptions,
   UseFancyStreamResult,
   StreamReducer,
+  StreamEventContext,
 } from "./useFancyStream";
 export { useInertiaHydration } from "./useInertiaHydration";
 export type {
