@@ -19,6 +19,12 @@ export type {
   StreamReducer,
   StreamEventContext,
 } from "./useFancyStream";
+export { useFancyTable } from "./useFancyTable";
+export type {
+  UseFancyTableOptions,
+  UseFancyTableResult,
+  FancyTableSort,
+} from "./useFancyTable";
 export { useInertiaHydration } from "./useInertiaHydration";
 export type {
   InertiaHydrationMap,
