@@ -129,11 +129,13 @@ import { FancyDataRoot } from "@particle-academy/fancy-query";
 ```tsx
 // 2. A page that received ['tools' => $tools] hydrates the cache.
 import {
-  useInertiaHydration,
   useFancyQuery,
   useFancyMutation,
   useFancyEchoInvalidation,
 } from "@particle-academy/fancy-query";
+// Inertia-only hook — own subpath so non-Inertia apps never touch
+// the optional @inertiajs/react peer.
+import { useInertiaHydration } from "@particle-academy/fancy-query/inertia";
 
 function ToolsPage({ orgId }) {
   useInertiaHydration({ tools: ["org-tools"] });
@@ -170,7 +172,7 @@ function ToolsPage({ orgId }) {
 | `useFancyMutation({ mutationFn, invalidates, … })` | `useMutation` that invalidates keys on success. |
 | `useFancyEchoInvalidation(channel, eventMap, options?)` | Subscribe + invalidate on broadcasts. |
 | `useFancyStream(key, options)` | Subscribe + patch the cache in place via per-event `setQueryData` reducers (streaming/chat). |
-| `useInertiaHydration(map, options?)` | Seed the cache from Inertia page props. |
+| `useInertiaHydration(map, options?)` | Seed the cache from Inertia page props. Import from `@particle-academy/fancy-query/inertia` (needs the `@inertiajs/react` peer). |
 | `useQueryClient`, `QueryClient`, `toQueryKeys` | Re-exported primitives. |
 
 ## License

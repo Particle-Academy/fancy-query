@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.0 — 2026-07-06
+
+### Breaking
+- **`useInertiaHydration` moved to `@particle-academy/fancy-query/inertia`.**
+  The root barrel re-exported it while it statically imports the *optional*
+  `@inertiajs/react` peer — so every non-Inertia consumer (e.g. a plain Vite
+  app importing only `FancyDataRoot` + `useFancyStream`) failed at build time
+  with `Could not resolve "@inertiajs/react"`. The hook (and its
+  `InertiaHydrationMap` / `UseInertiaHydrationOptions` types) now ships on its
+  own entry; the root entry no longer references `@inertiajs/react` at all.
+  Migration: `import { useInertiaHydration } from "@particle-academy/fancy-query/inertia"`.
+
+## 0.4.0 — 2026-06-27
+
+### Added
+- **`useFancyTable`** — headless live data-table binding.
+
 ## 0.3.0 — 2026-06-09
 
 `useFancyStream` extensions for real chat / tool-execution state machines (#3,

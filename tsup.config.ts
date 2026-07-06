@@ -1,7 +1,9 @@
 import { defineConfig } from "tsup";
 
 export default defineConfig({
-  entry: ["src/index.ts"],
+  // `inertia` is a separate entry (→ `fancy-query/inertia`) so the root entry
+  // never references the optional `@inertiajs/react` peer.
+  entry: ["src/index.ts", "src/inertia.ts"],
   format: ["esm", "cjs"],
   dts: true,
   sourcemap: true,

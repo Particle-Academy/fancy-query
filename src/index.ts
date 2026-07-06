@@ -25,11 +25,9 @@ export type {
   UseFancyTableResult,
   FancyTableSort,
 } from "./useFancyTable";
-export { useInertiaHydration } from "./useInertiaHydration";
-export type {
-  InertiaHydrationMap,
-  UseInertiaHydrationOptions,
-} from "./useInertiaHydration";
+// NOTE: `useInertiaHydration` intentionally does NOT live here. It statically
+// imports the optional `@inertiajs/react` peer, so it ships on its own entry:
+// `@particle-academy/fancy-query/inertia`.
 
 // Shared types + helpers
 export { toQueryKeys } from "./keys";
