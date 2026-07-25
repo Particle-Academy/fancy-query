@@ -1,5 +1,43 @@
 # Changelog
 
+## 0.6.0 — 2026-07-25
+
+### Added
+- **`poll.while` accepts a predicate** — `"streaming" | "always" | (() => boolean)`
+  ([#4](https://github.com/Particle-Academy/fancy-query/issues/4)).
+
+  `while: "streaming"` only starts polling once `stream.started` has been
+  **received**, which makes missed-broadcast recovery depend on receiving a
+  broadcast. Drop that one event and a long turn never polls; drop the end event
+  too and it is stranded with no indicator and no recovery. `"always"` was the
+  only escape, and it polls when idle — not viable for a per-chat endpoint.
+
+  A predicate lets recovery run off your own in-flight state, set the moment the
+  user sends, independent of any broadcast:
+
+  ```ts
+  poll: {
+    while: () => isProcessingRef.current,
+    intervalMs: 4000,
+    commit: (next) => next?.history?.at(-1)?.role === "assistant",
+  }
+  ```
+
+  The predicate is **re-read on every tick**, so backing it with a ref works —
+  which is the point, since the flag has to change without a re-render.
+  Evaluating it once would leave the poll stuck on whatever it read at mount.
+  An inline arrow is also fine: its identity is deliberately kept out of the
+  effect's deps, so re-rendering does not restart the interval.
+
+  **Consumers need do nothing** — `while` still defaults to `"streaming"` and
+  both existing string values behave exactly as before.
+
+- **Tests.** This package had none; `npm test` now runs vitest, and CI already
+  invoked `npm test --if-present`, so it wires in with no workflow change. The
+  four cases pin the predicate contract, including the two failure modes that
+  would otherwise regress in silence — a ref flip mid-turn being ignored, and an
+  inline predicate restarting the interval on every render.
+
 ## 0.5.0 — 2026-07-06
 
 ### Breaking

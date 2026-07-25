@@ -53,15 +53,28 @@ export interface UseFancyStreamOptions<TData> {
    */
   streaming?: { startEvent?: string | string[]; endEvent?: string | string[] } | false;
   /**
-   * Missed-broadcast recovery. Re-fetches `fetchInitial(prev)` on an interval
-   * (`while: "streaming"` polls only between the start/end events; `"always"`
-   * whenever enabled). Pass `commit(next, prev)` to gate whether the refetch is
-   * applied — e.g. only commit when the turn is actually done — so an in-flight
-   * stream isn't clobbered; merge via `fetchInitial`'s `prev` arg to keep
-   * optimistic rows.
+   * Missed-broadcast recovery. Re-fetches `fetchInitial(prev)` on an interval.
+   * Pass `commit(next, prev)` to gate whether the refetch is applied — e.g. only
+   * commit when the turn is actually done — so an in-flight stream isn't
+   * clobbered; merge via `fetchInitial`'s `prev` arg to keep optimistic rows.
+   *
+   * `while` decides when the interval runs:
+   * - `"streaming"` (default) — only between the start/end events.
+   * - `"always"` — whenever enabled.
+   * - `() => boolean` — **your own in-flight state**, evaluated on every tick.
+   *
+   * Prefer the predicate for recovery that must survive a dropped broadcast.
+   * `"streaming"` can only start once `stream.started` has been *received*, so
+   * the mechanism meant to survive missed broadcasts is itself gated on one: if
+   * that event drops, a long turn polls never, and if the end event drops too it
+   * is stranded. A predicate driven by an optimistic flag set the moment the
+   * user sends ("I am waiting on a turn") has no such dependency.
+   *
+   * The predicate is read fresh each tick, so backing it with a ref — the usual
+   * shape, since it must change without a re-render — works as expected.
    */
   poll?: {
-    while?: "streaming" | "always";
+    while?: "streaming" | "always" | (() => boolean);
     intervalMs: number;
     commit?: (next: TData, prev: TData | undefined) => boolean;
   };
@@ -244,18 +257,33 @@ export function useFancyStream<TData = unknown>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [echo, enabled, channel, eventsKey, queryKeyStr, queryClient, write]);
 
-  // Missed-broadcast recovery — reconcile on an interval while streaming (or always).
+  // A stable dep. An inline `while: () => ref.current` is a NEW function every
+  // render, so depending on its identity would tear down and recreate the
+  // interval on each render — a poll that never survives long enough to fire.
+  const pollWhileKind = typeof poll?.while === "function" ? "fn" : (poll?.while ?? "streaming");
+
+  // Missed-broadcast recovery — reconcile on an interval.
   useEffect(() => {
     if (!poll || !enabled) {
       return;
     }
-    const active = poll.while === "always" || isStreaming;
+    // A predicate keeps the interval alive and decides PER TICK. Evaluating it
+    // once here would be wrong: the consumer's flag is normally a ref (it has to
+    // change without a re-render), so this effect would never re-run to see it
+    // flip, and the poll would be stuck on whatever it read at mount.
+    const active = pollWhileKind === "always" || pollWhileKind === "fn" || isStreaming;
     if (!active) {
       return;
     }
-    const id = setInterval(() => void reconcile(), poll.intervalMs);
+    const id = setInterval(() => {
+      const when = pollRef.current?.while;
+      if (typeof when === "function" && !when()) {
+        return;
+      }
+      void reconcile();
+    }, poll.intervalMs);
     return () => clearInterval(id);
-  }, [poll?.intervalMs, poll?.while, isStreaming, enabled, reconcile]);
+  }, [poll?.intervalMs, pollWhileKind, isStreaming, enabled, reconcile]);
 
   return {
     data: query.data,
