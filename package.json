@@ -1,7 +1,7 @@
 {
   "name": "@particle-academy/fancy-query",
   "version": "0.6.0",
-  "description": "Server-state for React + Inertia + Reverb apps — a thin wrapper over TanStack Query that adds Inertia page-prop hydration, declarative Echo-event → query invalidation, and auto-invalidating mutations. The value-add is the integrations, not the cache.",
+  "description": "Server-state for React + Inertia + Reverb apps \u2014 a thin wrapper over TanStack Query that adds Inertia page-prop hydration, declarative Echo-event \u2192 query invalidation, and auto-invalidating mutations. The value-add is the integrations, not the cache.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Particle-Academy/fancy-query.git"
@@ -41,7 +41,7 @@
   "scripts": {
     "build": "tsup",
     "dev": "tsup --watch",
-    "lint": "tsc --noEmit",
+    "lint": "tsc --noEmit && eslint .",
     "clean": "rm -rf dist",
     "prepublishOnly": "tsup",
     "test": "vitest run"
@@ -74,11 +74,14 @@
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
+    "eslint": "^10.8.0",
+    "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^29.1.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tsup": "^8.5.0",
     "typescript": "^5.8.0",
+    "typescript-eslint": "^8.65.0",
     "vitest": "^4.1.10"
   },
   "publishConfig": {
