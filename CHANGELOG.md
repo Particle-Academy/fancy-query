@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.8.0 — 2026-08-07
+
+### Added
+
+- **The Live Contract** — how a package declares, as pure data, which query keys
+  its surface owns and which broadcast events invalidate them.
+
+  `LiveContract` is a **type**, so a package declares its contract with
+  `import type` and gains no dependency: a host that does not want live
+  behaviour pays nothing for the declaration existing.
+
+  ```ts
+  import type { LiveContract } from "@particle-academy/fancy-query";
+
+  export const catalogLive = {
+    namespace: "catalog",
+    channel: "admin.products",
+    events: [
+      { event: "catalog.product.updated", keys: [["catalog", "products"]] },
+    ],
+  } as const satisfies LiveContract;
+  ```
+
+  Alongside it: `toEchoMap()` turns a contract into the map
+  `useFancyEchoInvalidation` already takes, `liveKey()` builds keys to the
+  convention, `liveEventNames()` lists what a package promises to broadcast, and
+  `validateLiveContract()` returns everything wrong with a contract at once.
+
+  Data rather than code on purpose — three audiences read the same declaration:
+  the JS host wiring it up, the PHP twin asserting parity against it, and an
+  agent reasoning about what a mutation will invalidate. Only the first of those
+  can execute code.
+
+  `validateLiveContract` enforces the rules that otherwise fail **silently**: a
+  namespace carrying its package prefix, an event outside its own namespace, a
+  key that reaches into another package's cache without saying why, an
+  unserializable key segment. Each of those leaves a cache nobody invalidated,
+  which presents as "the UI does not update" with no error anywhere.
+
+  **What you must do:** nothing. Purely additive, and nothing is wired up until
+  a package ships a contract.
+
 ## 0.7.0 — 2026-08-07
 
 ### Changed

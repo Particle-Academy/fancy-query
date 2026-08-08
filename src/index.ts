@@ -31,6 +31,12 @@ export type {
 
 // Shared types + helpers
 export { toQueryKeys } from "./keys";
+
+// The Live Contract — how a package declares which query keys its surface owns
+// and which broadcast events invalidate them. `LiveContract` is a TYPE, so a
+// package can declare its contract with `import type` and gain no dependency.
+export { liveKey, toEchoMap, liveEventNames, validateLiveContract, LIVE_VERBS } from "./live";
+export type { LiveContract, LiveEvent, LiveVerb } from "./live";
 export type {
   KeyInput,
   EchoLike,
