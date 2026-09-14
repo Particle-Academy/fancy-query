@@ -17,7 +17,7 @@ The value-add is the integrations, not the cache. TanStack Query, `@inertiajs/re
 and `react` are **peer dependencies** — nothing is bundled, and apps that don't
 use a data hook tree-shake the package away.
 
-> **Status:** v0.3.0. Public API is in place (query / mutation / invalidation /
+> **Status:** pre-1.0. Public API is in place (query / mutation / invalidation /
 > hydration / streaming); comprehensive tests, the `fancy-inertia` `withData`
 > composition, and a few edge cases are tracked in Tynn.
 
