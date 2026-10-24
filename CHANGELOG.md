@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## 0.9.0 — 2026-10-23
+
 ### Added
 
 - `fancy-query/socket` exports a dependency-free `createSocketEcho` client for
