@@ -23,6 +23,16 @@
         "default": "./dist/index.cjs"
       }
     },
+    "./socket": {
+      "import": {
+        "types": "./dist/socket.d.ts",
+        "default": "./dist/socket.js"
+      },
+      "require": {
+        "types": "./dist/socket.d.cts",
+        "default": "./dist/socket.cjs"
+      }
+    },
     "./inertia": {
       "import": {
         "types": "./dist/inertia.d.ts",

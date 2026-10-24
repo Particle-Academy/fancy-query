@@ -6,15 +6,15 @@ import type { QueryKey } from "@tanstack/react-query";
  */
 export type KeyInput = QueryKey | string;
 
-/** Minimal shape of a Laravel Echo channel. fancy-query never constructs one. */
+/** Minimal shape shared by Laravel Echo and fancy-query/socket. */
 export interface EchoChannelLike {
   listen(event: string, callback: (payload: unknown) => void): EchoChannelLike;
   stopListening?(event: string, callback?: (payload: unknown) => void): EchoChannelLike;
 }
 
 /**
- * Minimal shape of a Laravel Echo client. The consumer brings their own; this
- * package never owns the connection — it only subscribes + invalidates.
+ * Minimal socket contract. The consumer owns the connection, using Laravel
+ * Echo or the first-party createSocketEcho from fancy-query/socket.
  */
 export interface EchoLike {
   channel(name: string): EchoChannelLike;

@@ -22,7 +22,7 @@ export interface UseFancyEchoInvalidationOptions {
  *
  * Each listed key is invalidated separately. The channel name carries its
  * prefix (`private-` / `presence-`); it maps to `echo.private()` /
- * `echo.join()` / `echo.channel()`, and `echo.leave()` on cleanup. The Echo
+ * `echo.join()` / `echo.channel()`, and `echo.leave(fullPrefixedName)` on cleanup. The Echo
  * connection is owned by the consumer.
  *
  * NOTE: event names are passed to Echo's `listen()` as written. If you broadcast
@@ -48,7 +48,7 @@ export function useFancyEchoInvalidation(
       return;
     }
 
-    const { subscribe, bareName } = resolveChannel(echo, channel);
+    const { subscribe } = resolveChannel(echo, channel);
     const subscribedChannel = subscribe();
     const handlers: Array<[string, (payload: unknown) => void]> = [];
 
@@ -66,7 +66,7 @@ export function useFancyEchoInvalidation(
       for (const [event, handler] of handlers) {
         subscribedChannel.stopListening?.(event, handler);
       }
-      echo.leave?.(bareName);
+      echo.leave?.(channel);
     };
     // `events` is captured via the serialized `eventsKey`.
     // eslint-disable-next-line react-hooks/exhaustive-deps

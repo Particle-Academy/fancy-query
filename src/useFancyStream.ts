@@ -216,7 +216,7 @@ export function useFancyStream<TData = unknown>(
     if (!echo || !enabled) {
       return;
     }
-    const { subscribe, bareName } = resolveChannel(echo, channel);
+    const { subscribe } = resolveChannel(echo, channel);
     const subscribedChannel = subscribe();
 
     const events = new Set<string>([...Object.keys(onRef.current), ...(extraEventsRef.current ?? [])]);
@@ -251,7 +251,7 @@ export function useFancyStream<TData = unknown>(
       for (const [event, handler] of handlers) {
         subscribedChannel.stopListening?.(event, handler);
       }
-      echo.leave?.(bareName);
+      echo.leave?.(channel);
     };
     // reducers/config captured via refs; deps are the structural identity only.
     // eslint-disable-next-line react-hooks/exhaustive-deps

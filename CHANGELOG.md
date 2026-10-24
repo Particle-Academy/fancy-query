@@ -2,7 +2,20 @@
 
 ## [Unreleased]
 
+### Added
+
+- `fancy-query/socket` exports a dependency-free `createSocketEcho` client for
+  Pusher protocol v7 servers (including Reverb). It implements the `EchoLike`
+  contract for public, private and presence channel subscriptions, host-provided
+  authorization, heartbeat/reconnect and acknowledgement callbacks. The host
+  owns the connection and authorization policy; no app secret belongs in a
+  browser. The separate entry imports no React, Inertia or query runtime.
+
 ### Fixed
+
+- Hook cleanup retains the channel's private/presence prefix. Leaving a private
+  subscription no longer removes a simultaneous public subscription with the
+  same bare name. The first-party client reference-counts shared subscriptions.
 
 - **`CHANGELOG.md` is now in the published tarball.** `files` did not whitelist it, so npm never shipped it — and this package puts breaking changes in MINOR releases and tells you in the README to read the entry before taking one. The instruction existed for the author, who has the file, and not for the consumer, who is the only one being instructed. Nothing for you to do; the file simply arrives from this release on.
 

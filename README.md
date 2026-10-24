@@ -27,6 +27,60 @@ use a data hook tree-shake the package away.
 npm install @particle-academy/fancy-query @tanstack/react-query
 ```
 
+## First-party socket client
+
+`@particle-academy/fancy-query/socket` supplies the `EchoLike` transport without
+laravel-echo or pusher-js. The separate entry imports no React, Inertia or query
+runtime. It connects lazily when a channel is acquired, so constructing the
+client during SSR starts no connection. The host owns its lifecycle:
+
+```tsx
+import { createSocketEcho } from '@particle-academy/fancy-query/socket';
+
+const echo = createSocketEcho({
+  url: 'wss://socket.example/app/PUBLIC_APP_KEY',
+  authorize: async ({ socketId, channelName }, signal) => {
+    const response = await fetch('/broadcasting/auth', {
+      method: 'POST', credentials: 'same-origin', signal,
+      headers: { 'Content-Type': 'application/json',
+        'X-CSRF-TOKEN': document.querySelector<HTMLMetaElement>('meta[name="csrf-token"]')?.content ?? '' },
+      body: JSON.stringify({ socket_id: socketId, channel_name: channelName }),
+    });
+    if (!response.ok) throw new Error('Channel authorization refused');
+    return response.json();
+  },
+});
+// Supply echo to FancyDataRoot; call echo.disconnect() when its host closes.
+```
+
+The server endpoint must authenticate the caller and authorize the specific
+channel. Only the public app key is sent to the browser; keep the app secret on
+the server. `channel`, `private` and `join` implement the minimal `EchoLike`
+contract. Private and presence subscriptions require `authorize`; presence
+also requires its signed `channel_data`. Encrypted channels and client-event
+publishing are unsupported. Laravel event namespaces work as in Echo; set
+`namespace: false` for raw protocol names, or prefix a custom event with `.`.
+
+Each channel acquisition owns one lease. Hooks release their own lease;
+manual subscriptions must pair `channel/private/join` with `leave`, using the
+full name such as `private-room.3` to isolate that subscription. Reconnects
+reauthorize with the new socket ID. Refetch authoritative state after each
+acknowledgement to recover missed events:
+
+```ts
+const room = echo.private('room.3').subscribed(() => refreshRoom());
+room.listen('.cms.updated', applyUpdate);
+// On cleanup: room.stopListening('.cms.updated', applyUpdate);
+// echo.leave('private-room.3');
+```
+
+`onState` and `onError` expose connection status and bounded failure codes.
+Heartbeats, handshake/authorization timeouts and capped reconnect backoff
+follow the [Pusher protocol](https://pusher.com/docs/channels/library_auth_reference/pusher-websockets-protocol/).
+Fatal 4000–4099 close codes stop automatic retries. The host can explicitly
+`connect()` again after correcting configuration. Hosts using another Echo
+implementation retain control of that implementation's connection lifecycle.
+
 ## The standard flow
 
 > **Mutation OR Echo event → invalidate keys → cache refetches once → every
