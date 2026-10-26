@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Security
+
+- Update Vitest to 4.1.12 and patch the transitive undici development dependency for security fixes; dev toolchain only, nothing to do.
+
 ## 0.9.0 — 2026-10-23
 
 ### Added
