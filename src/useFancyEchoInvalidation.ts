@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, type QueryKey } from "@tanstack/react-query";
 import { toQueryKeys } from "./keys";
 import { useEchoClient } from "./FancyDataRoot";
 import { resolveChannel } from "./channel";
@@ -62,7 +62,29 @@ export function useFancyEchoInvalidation(
       handlers.push([event, handler]);
     }
 
+    // Events published while the socket was down are never replayed, so every
+    // acknowledgement (the first and each resubscribe after a reconnect)
+    // invalidates every configured key once. laravel-echo wraps the callback
+    // and offers no way to unbind it, hence the `active` guard.
+    const allKeys = new Map<string, QueryKey>();
+    for (const keys of Object.values(events)) {
+      for (const queryKey of toQueryKeys(keys)) allKeys.set(JSON.stringify(queryKey), queryKey);
+    }
+    let active = true;
+    const onSubscribed = () => {
+      if (!active) return;
+      for (const queryKey of allKeys.values()) {
+        void queryClient.invalidateQueries({ queryKey });
+      }
+    };
+    if (typeof subscribedChannel.subscribed === "function") {
+      subscribedChannel.subscribed(onSubscribed);
+    }
+
     return () => {
+      active = false;
+      // First-party client: subscribed() is listen() on this name, so unbind it.
+      subscribedChannel.stopListening?.(".pusher:subscription_succeeded", onSubscribed);
       for (const [event, handler] of handlers) {
         subscribedChannel.stopListening?.(event, handler);
       }

@@ -19,6 +19,14 @@
   call per acknowledgement — including one shortly after mount, which closes
   the gap between the seed fetch and the subscription. If you were polling
   purely to cover reconnects, you can drop that poll.
+- **`useFancyEchoInvalidation` has the same recovery.** On every subscription
+  acknowledgement (first subscribe and each resubscribe after a reconnect) it
+  invalidates every query key in its event map, once per key even when several
+  events list the same key. Before this, a query whose event was published while
+  the socket was down stayed stale until some later event happened to fire. Same
+  guards: no `subscribed()` means the old behaviour, and nothing fires after
+  unmount. **Nothing to do**; expect one invalidation round per acknowledgement,
+  which only refetches queries that are currently mounted.
 - `EchoChannelLike` gains an optional `subscribed?(callback)`. Optional, so
   every existing `EchoLike` still satisfies it.
 

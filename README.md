@@ -228,7 +228,7 @@ function ToolsPage({ orgId }) {
 | `FANCY_QUERY_DEFAULTS` | `staleTime: 30s`, `gcTime: 5m`, `refetchOnWindowFocus`, one retry. |
 | `useFancyQuery(key, fn, options?)` | `useQuery` with the ergonomic signature; full options pass through. |
 | `useFancyMutation({ mutationFn, invalidates, … })` | `useMutation` that invalidates keys on success. |
-| `useFancyEchoInvalidation(channel, eventMap, options?)` | Subscribe + invalidate on broadcasts. |
+| `useFancyEchoInvalidation(channel, eventMap, options?)` | Subscribe + invalidate on broadcasts; also invalidates every listed key on each subscription acknowledgement, so reconnects recover missed events. |
 | `useFancyStream(key, options)` | Subscribe + patch the cache in place via per-event `setQueryData` reducers (streaming/chat). |
 | `useInertiaHydration(map, options?)` | Seed the cache from Inertia page props. Import from `@particle-academy/fancy-query/inertia` (needs the `@inertiajs/react` peer). |
 | `useQueryClient`, `QueryClient`, `toQueryKeys` | Re-exported primitives. |
