@@ -247,7 +247,24 @@ export function useFancyStream<TData = unknown>(
       handlers.push([event, handler]);
     }
 
+    // Events published while the socket was down are never replayed, so every
+    // acknowledgement — the first and each resubscribe after a reconnect —
+    // reconciles against authoritative state. The first one matters too: the
+    // seed fetch usually completes before the socket acks, and anything
+    // published in between would otherwise be lost. laravel-echo wraps the
+    // callback and offers no way to unbind it, hence the `active` guard.
+    let active = true;
+    const onSubscribed = () => {
+      if (active) ctxRef.current.refetch();
+    };
+    if (typeof subscribedChannel.subscribed === "function") {
+      subscribedChannel.subscribed(onSubscribed);
+    }
+
     return () => {
+      active = false;
+      // First-party client: subscribed() is listen() on this name, so unbind it.
+      subscribedChannel.stopListening?.(".pusher:subscription_succeeded", onSubscribed);
       for (const [event, handler] of handlers) {
         subscribedChannel.stopListening?.(event, handler);
       }

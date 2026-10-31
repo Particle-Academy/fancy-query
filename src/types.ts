@@ -10,6 +10,12 @@ export type KeyInput = QueryKey | string;
 export interface EchoChannelLike {
   listen(event: string, callback: (payload: unknown) => void): EchoChannelLike;
   stopListening?(event: string, callback?: (payload: unknown) => void): EchoChannelLike;
+  /**
+   * Called on every subscription acknowledgement, including each resubscribe
+   * after a reconnect. Optional: a channel without it simply gets no
+   * acknowledgement-driven refetch.
+   */
+  subscribed?(callback: (payload?: unknown) => void): EchoChannelLike;
 }
 
 /**

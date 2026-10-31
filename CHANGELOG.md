@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-10-31
+
+### Fixed
+
+- **`useFancyStream` now refetches when its channel's subscription is
+  acknowledged — on the first subscribe and on every resubscribe after a
+  reconnect.** Events published while a socket is down are never replayed, and
+  the README told consumers to refetch after each acknowledgement, but the hook
+  never hooked `subscribed()`, so a stream silently missed whatever happened in
+  the gap. It now calls the same `refetch()` it hands you (`fetchInitial(prev)`,
+  gated by `poll.commit` if you set one). Works with `fancy-query/socket` and
+  with laravel-echo channels; a channel without `subscribed()` keeps the old
+  behaviour, and an unmounted hook never refetches.
+  **Nothing to do.** There is no new option. Expect one extra `fetchInitial`
+  call per acknowledgement — including one shortly after mount, which closes
+  the gap between the seed fetch and the subscription. If you were polling
+  purely to cover reconnects, you can drop that poll.
+- `EchoChannelLike` gains an optional `subscribed?(callback)`. Optional, so
+  every existing `EchoLike` still satisfies it.
+
 ### Security
 
 - Update Vitest to 4.1.12 and patch the transitive undici development dependency for security fixes; dev toolchain only, nothing to do.

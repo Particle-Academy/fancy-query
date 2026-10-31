@@ -166,6 +166,10 @@ useFancyStream(["chat", chatId], {
 - **`fetchInitial(prev)`** receives the previous cache, and **`poll.commit`**
   gates whether a recovery refetch is applied — so the poll *merges* instead of
   wiping in-flight streamed posts.
+- **Reconnects recover on their own.** Every subscription acknowledgement (the
+  first, and each resubscribe after a reconnect) runs `refetch()`, so events
+  published while the socket was down are not lost. Needs a channel with
+  `subscribed()` — `fancy-query/socket` and laravel-echo both have it.
 - **`streaming.startEvent`/`endEvent`** accept a list; **`flushSync`** opts into
   synchronous paints.
 
