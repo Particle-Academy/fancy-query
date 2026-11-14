@@ -16,7 +16,12 @@ export interface SocketEchoOptions {
 }
 
 type Handler = (payload: unknown) => void;
+type WhisperHandler = (data: unknown, meta?: { userId?: string }) => void;
 type Timer = ReturnType<typeof setTimeout>;
+/** Pusher's limit for one client event. A larger one is refused here, not by the server. */
+const MAX_WHISPER_BYTES = 10240;
+const validWhisperEvent = (name: string) => /^[A-Za-z0-9_.:-]{1,190}$/.test(name);
+const byteLength = (text: string) => new TextEncoder().encode(text).length;
 const validChannel = (name: string) => /^[A-Za-z0-9_=@,.;-]{1,164}$/.test(name) && !name.startsWith("private-encrypted-");
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === "object" && !Array.isArray(value);
 const decode = (value: unknown): unknown => {
@@ -54,10 +59,71 @@ export class SocketChannel implements EchoChannelLike {
   /** Fires on every acknowledgement, including reconnection; refetch authoritative state here. */
   subscribed(callback: Handler): this { return this.listen(".pusher:subscription_succeeded", callback); }
 
-  deliver(event: string, payload: unknown): void {
-    for (const callback of [...(this.handlers.get(event) ?? [])]) {
-      try { callback(payload); } catch { this.owner.report({ code: "listener_failed", channel: this.name }); }
+  private memberInfo = new Map<string, unknown>();
+  private presence = { here: new Set<(members: unknown[]) => void>(), joining: new Set<Handler>(), leaving: new Set<Handler>() };
+  private whispers = new Map<string, Set<WhisperHandler>>();
+
+  /** Presence only: every member's info, on each acknowledgement (so again after a reconnect). */
+  here(callback: (members: unknown[]) => void): this { this.presence.here.add(callback); return this; }
+  joining(callback: Handler): this { this.presence.joining.add(callback); return this; }
+  leaving(callback: Handler): this { this.presence.leaving.add(callback); return this; }
+  /** The current presence members' info, as the server's channel auth described them. */
+  members(): unknown[] { return [...this.memberInfo.values()]; }
+
+  /** Send `client-<event>` to the other subscribers. Private and presence channels only. */
+  whisper(event: string, data: unknown): this { this.owner.whisper(this, event, data); return this; }
+
+  listenForWhisper(event: string, callback: WhisperHandler): this {
+    const name = `client-${event}`;
+    const handlers = this.whispers.get(name) ?? new Set<WhisperHandler>();
+    handlers.add(callback); this.whispers.set(name, handlers);
+    return this;
+  }
+
+  stopListeningForWhisper(event: string, callback?: WhisperHandler): this {
+    const name = `client-${event}`;
+    if (callback) {
+      const handlers = this.whispers.get(name); handlers?.delete(callback);
+      if (handlers?.size === 0) this.whispers.delete(name);
+    } else this.whispers.delete(name);
+    return this;
+  }
+
+  deliver(event: string, payload: unknown, userId?: string): void {
+    if (this.name.startsWith("presence-")) this.track(event, payload);
+    if (event.startsWith("client-")) {
+      for (const callback of [...(this.whispers.get(event) ?? [])]) {
+        this.safely(() => callback(payload, userId === undefined ? {} : { userId }));
+      }
+      return;
     }
+    for (const callback of [...(this.handlers.get(event) ?? [])]) this.safely(() => callback(payload));
+  }
+
+  private track(event: string, payload: unknown): void {
+    if (event === "pusher:subscription_succeeded") {
+      const presence = record(payload) && record(payload.presence) ? payload.presence : {};
+      const hash = record(presence.hash) ? presence.hash : {};
+      const ids = Array.isArray(presence.ids) ? presence.ids.map(String) : Object.keys(hash);
+      this.memberInfo = new Map(ids.filter((id) => id in hash).map((id) => [id, hash[id]]));
+      const members = this.members();
+      for (const callback of [...this.presence.here]) this.safely(() => callback(members));
+      return;
+    }
+    if (!record(payload) || (typeof payload.user_id !== "string" && typeof payload.user_id !== "number")) return;
+    const id = String(payload.user_id);
+    if (event === "pusher_internal:member_added") {
+      this.memberInfo.set(id, payload.user_info);
+      for (const callback of [...this.presence.joining]) this.safely(() => callback(payload.user_info));
+    } else if (event === "pusher_internal:member_removed") {
+      const info = this.memberInfo.has(id) ? this.memberInfo.get(id) : { user_id: id };
+      this.memberInfo.delete(id);
+      for (const callback of [...this.presence.leaving]) this.safely(() => callback(info));
+    }
+  }
+
+  private safely(run: () => void): void {
+    try { run(); } catch { this.owner.report({ code: "listener_failed", channel: this.name }); }
   }
 }
 
@@ -135,6 +201,22 @@ export class SocketEcho implements EchoLike {
     if (event.startsWith(".") || event.startsWith("\\")) return event.slice(1);
     const namespace = this.options.namespace === undefined ? "App.Events" : this.options.namespace;
     return namespace ? `${namespace}.${event}`.split(".").join("\\") : event;
+  }
+
+  /** Called by {@link SocketChannel.whisper}; refusals are reported, never thrown. */
+  whisper(channel: SocketChannel, event: string, data: unknown): void {
+    if (!channel.name.startsWith("private-") && !channel.name.startsWith("presence-")) {
+      this.report({ code: "whisper_unsupported", channel: channel.name }); return;
+    }
+    if (!validWhisperEvent(event)) { this.report({ code: "whisper_invalid", channel: channel.name }); return; }
+    if (this.channels.get(channel.name) !== channel || channel.status !== "subscribed") {
+      this.report({ code: "whisper_not_subscribed", channel: channel.name }); return;
+    }
+    let encoded: string | undefined;
+    try { encoded = JSON.stringify(data ?? null); } catch { encoded = undefined; }
+    if (encoded === undefined) { this.report({ code: "whisper_invalid", channel: channel.name }); return; }
+    if (byteLength(encoded) > MAX_WHISPER_BYTES) { this.report({ code: "whisper_too_large", channel: channel.name }); return; }
+    this.sendFrame({ event: `client-${event}`, channel: channel.name, data: JSON.parse(encoded) });
   }
 
   report(failure: SocketFailure): void {
@@ -235,13 +317,21 @@ export class SocketEcho implements EchoLike {
       clearTimeout(channel.acknowledgementTimer);
       channel.status = "subscribed"; channel.deliver("pusher:subscription_succeeded", data); return;
     }
-    if (channel?.status === "subscribed") channel.deliver(message.event, data);
+    if (channel?.status === "subscribed") {
+      // On a presence channel the SERVER stamps a client event's sender; a peer cannot choose it.
+      const userId = typeof message.user_id === "string" || typeof message.user_id === "number" ? String(message.user_id) : undefined;
+      channel.deliver(message.event, data, userId);
+    }
   }
 
   private send(event: string, data: Record<string, unknown>): boolean {
+    return this.sendFrame({ event, data });
+  }
+
+  private sendFrame(frame: Record<string, unknown>): boolean {
     const socket = this.socket;
     if (!socket || socket.readyState !== 1 || !this.socketId) return false;
-    try { socket.send(JSON.stringify({ event, data })); return true; }
+    try { socket.send(JSON.stringify(frame)); return true; }
     catch { this.report({ code: "send_failed" }); this.lost(socket, 4100); return false; }
   }
 

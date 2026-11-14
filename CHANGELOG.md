@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Presence members and whispers on `EchoChannelLike` and `fancy-query/socket`**
+  (CC-fancy-0037, the co-work transport). The channel contract gains OPTIONAL
+  `here`, `joining`, `leaving`, `whisper`, `listenForWhisper` and
+  `stopListeningForWhisper`, named as laravel-echo names them, and `SocketEcho`
+  implements them: `here` fires on every subscription acknowledgement (so again
+  after a reconnect) with the members the server's channel auth described;
+  `joining` / `leaving` follow `member_added` / `member_removed`; `whisper` sends
+  `client-<event>` on private and presence channels only, after the
+  acknowledgement and within Pusher's 10 KB client-event limit, and otherwise
+  reports `whisper_unsupported`, `whisper_not_subscribed`, `whisper_too_large`
+  or `whisper_invalid` through `onError` instead of sending. A received whisper
+  carries the server-stamped `userId` on a presence channel. **Nothing to do:**
+  every member is optional, so an existing `EchoLike` still type-checks, and
+  nothing changes until you call one. Client events must be enabled on your
+  server (Reverb `accept_client_events_from`) for whispers to arrive.
+
 ### Changed
 
 - **Releases need a lab-run certificate.** `publish.yml` gains a read-only

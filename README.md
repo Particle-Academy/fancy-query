@@ -57,8 +57,7 @@ The server endpoint must authenticate the caller and authorize the specific
 channel. Only the public app key is sent to the browser; keep the app secret on
 the server. `channel`, `private` and `join` implement the minimal `EchoLike`
 contract. Private and presence subscriptions require `authorize`; presence
-also requires its signed `channel_data`. Encrypted channels and client-event
-publishing are unsupported. Laravel event namespaces work as in Echo; set
+also requires its signed `channel_data`. Encrypted channels are unsupported. Laravel event namespaces work as in Echo; set
 `namespace: false` for raw protocol names, or prefix a custom event with `.`.
 
 Each channel acquisition owns one lease. Hooks release their own lease;
@@ -73,6 +72,25 @@ room.listen('.cms.updated', applyUpdate);
 // On cleanup: room.stopListening('.cms.updated', applyUpdate);
 // echo.leave('private-room.3');
 ```
+
+Presence channels report their members, and private and presence channels can
+carry client events ("whispers") when the server allows them (Reverb:
+`accept_client_events_from`, Pusher: client events enabled):
+
+```ts
+const room = echo.join('cowork.session.7')
+  .here((members) => setPeers(members))      // every ack, so again after a reconnect
+  .joining((member) => addPeer(member))
+  .leaving((member) => dropPeer(member))
+  .listenForWhisper('cursor', (data, { userId } = {}) => moveCursor(userId, data));
+room.whisper('cursor', { x: 10, y: 20 });     // sent as client-cursor
+```
+
+Member info is whatever the server's channel auth returned. A whisper on a
+public channel, before the acknowledgement or over 10 KB is not sent and is
+reported through `onError` (`whisper_unsupported`, `whisper_not_subscribed`,
+`whisper_too_large`). On a presence channel `userId` is stamped by the server;
+the payload is still the peer's, so treat it as untrusted.
 
 `onState` and `onError` expose connection status and bounded failure codes.
 Heartbeats, handshake/authorization timeouts and capped reconnect backoff
