@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-11-14
+
 ### Added
 
 - **Presence members and whispers on `EchoChannelLike` and `fancy-query/socket`**
