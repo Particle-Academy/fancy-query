@@ -18,8 +18,9 @@ and `react` are **peer dependencies** — nothing is bundled, and apps that don'
 use a data hook tree-shake the package away.
 
 > **Status:** pre-1.0. Public API is in place (query / mutation / invalidation /
-> hydration / streaming); comprehensive tests, the `fancy-inertia` `withData`
-> composition, and a few edge cases are tracked in Tynn.
+> hydration / streaming); broader test coverage and a few edge cases are
+> tracked in Tynn. Inside fancy-inertia, mount `FancyDataRoot` through the
+> `providers` option of `setupFancyApp` / `buildFancyAppTree`.
 
 <!-- fancy-agents-note:start -->
 > **For agents.** This package is listed on the Fancy MCP catalog server at
@@ -201,7 +202,7 @@ useFancyStream(["chat", chatId], {
 ## End to end
 
 ```tsx
-// 1. Mount once — near the root (or via fancy-inertia's FancyAppRoot withData).
+// 1. Mount once — near the root (or via fancy-inertia's setupFancyApp `providers` option).
 import { FancyDataRoot } from "@particle-academy/fancy-query";
 
 <FancyDataRoot echo={window.Echo}>
